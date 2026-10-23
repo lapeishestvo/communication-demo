@@ -16,7 +16,7 @@ function boot(){
   const run=code=>vm.runInContext(code,context);
   run(source);
   run("state.ticketId=tickets[0].id;state.nav=ticket().events[0].id;state.tab='texts';ticket().status='text_review';touch();render();");
-  return {run,storage,toast:()=>elements.get('#toast').textContent,saved:()=>JSON.parse(storage.get('communication-tickets-v1'))[0]};
+  return {run,storage,html:()=>elements.get('#app').innerHTML,toast:()=>elements.get('#toast').textContent,saved:()=>JSON.parse(storage.get('communication-tickets-v1'))[0]};
 }
 
 test('declining without a comment keeps the event undecided and does not persist a decision',()=>{
@@ -26,7 +26,8 @@ test('declining without a comment keeps the event undecided and does not persist
   assert.equal(demo.run('event().review'),undefined);
   assert.equal(demo.run('ticket().status'),'text_review');
   assert.equal(demo.storage.get('communication-tickets-v1'),before);
-  assert.equal(demo.toast(),'Add a comment before declining.');
+  assert.match(demo.html(),/Required when declining/);
+  assert.match(demo.html(),/<textarea[^>]*data-field="reviewComment"[^>]*aria-invalid="true"/);
 });
 
 test('accepting persists the event approval while the ticket remains in text review',()=>{
@@ -49,13 +50,13 @@ test('development requires every approval and a declined ticket can return to th
   demo.run("reviewEvent('approved');reviewStage('send-to-development');");
   assert.equal(demo.run('ticket().status'),'text_review');
   assert.equal(demo.saved().status,'text_review');
-  assert.equal(demo.toast(),'Accept every event before sending to development.');
+  assert.equal(demo.toast(),'Review all events');
   demo.run("state.nav=ticket().events[1].id;reviewEvent('approved');reviewStage('send-to-development');");
   assert.equal(demo.run('ticket().status'),'in_development');
   assert.equal(demo.saved().status,'in_development');
 
   const declined=boot();
-  declined.run("event().reviewDraft='Please update the wording';reviewEvent('declined');reviewStage('return-to-writer');");
+  declined.run("event().reviewDraft='Please update the wording';reviewEvent('declined');state.nav=ticket().events[1].id;reviewEvent('approved');reviewStage('return-to-writer');");
   assert.equal(declined.run('ticket().status'),'text_pending');
   assert.equal(declined.saved().status,'text_pending');
   assert.equal(declined.saved().events[0].review.comment,'Please update the wording');

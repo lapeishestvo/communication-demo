@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MAX_EVENTS,STATUS,newEvent,addEvent,eventErrors,ticketErrors,resolveText,seedTickets} from './public/model.js';
+import {MAX_EVENTS,STATUS,newEvent,addEvent,eventErrors,ticketErrors,resolveText,seedTickets,channelsFor,deliveryChannels,createDemoEvidence} from './public/model.js';
 
 test('adding and duplicating events cannot exceed the ticket limit',()=>{
   const ticket={events:[]};
@@ -22,11 +22,26 @@ test('changing channel ignores deep links belonging to the previous channel',()=
   assert.ok(eventErrors(event).some(error=>error.field==='smsLink'));
   event.links.sms='plata://payments';
   assert.deepEqual(eventErrors(event),[]);
-  event.channel='Email';
-  event.texts.emailTitle='Payment reminder';
-  event.texts.emailMessage='Your payment is due tomorrow.';
+  event.channel='Push';
+  event.texts.pushTitle='Payment reminder';
+  event.texts.pushMessage='Your payment is due tomorrow.';
+  event.links.push='plata://payments';
   event.links.sms='';
   assert.deepEqual(eventErrors(event),[]);
+});
+
+test('channels outside MVP are inactive and cannot pass event validation',()=>{
+  for(const channel of ['Email','WhatsApp']){
+    const event={...newEvent(),name:'Legacy event',channel};
+    event.texts.emailTitle='Old email';event.texts.emailMessage='Keep this legacy copy';
+    event.texts.whatsappMessage='Keep this legacy copy too';
+    event.linkEnabled={push:true,sms:true};
+    assert.deepEqual(channelsFor(event),[]);
+    assert.equal(eventErrors(event).some(error=>error.field==='channel'),true);
+    assert.equal(eventErrors(event).some(error=>error.field==='pushLink'||error.field==='smsLink'),false);
+    assert.equal(event.texts.emailMessage,'Keep this legacy copy');
+    assert.equal(event.texts.whatsappMessage,'Keep this legacy copy too');
+  }
 });
 
 test('submission reports empty tickets and incomplete events across tabs',()=>{
@@ -39,6 +54,34 @@ test('submission reports empty tickets and incomplete events across tabs',()=>{
   assert.ok(ticketErrors({events:[event]}).some(error=>error.field==='smsMessage'&&error.nav===event.id));
   event.texts.smsMessage='Your payment is due tomorrow.';
   assert.deepEqual(ticketErrors({events:[event]}),[]);
+});
+
+test('Push or SMS remains distinct from Push + SMS and validates both channel copies',()=>{
+  assert.deepEqual(deliveryChannels,['Push','SMS','Push + SMS','Push or SMS']);
+  const event={...newEvent(),name:'Payment reminder',channel:'Push or SMS'};
+  assert.deepEqual(channelsFor(event),['Push','SMS']);
+  assert.deepEqual(eventErrors(event).map(error=>error.field),['pushTitle','pushMessage','smsMessage']);
+  event.texts.pushTitle='Payment reminder';
+  event.texts.pushMessage='Your payment is due tomorrow.';
+  event.texts.smsMessage='Your payment is due tomorrow.';
+  assert.deepEqual(ticketErrors({events:[event],communicationType:'Service'}),[]);
+  assert.equal(event.channel,'Push or SMS');
+  event.channel='Push + SMS';
+  assert.deepEqual(channelsFor(event),['Push','SMS']);
+  assert.deepEqual(eventErrors(event),[]);
+});
+
+test('Push or SMS validates both active links and generates evidence for both channels',()=>{
+  const event={...newEvent(),id:'fallback-event',name:'Payment reminder',channel:'Push or SMS'};
+  Object.assign(event.texts,{pushTitle:'Payment reminder',pushMessage:'Your payment is due tomorrow.',smsMessage:'Your payment is due tomorrow.'});
+  event.linkEnabled={push:true,sms:true};
+  assert.deepEqual(eventErrors(event).map(error=>error.field),['pushLink','smsLink']);
+  event.links={push:'plata://payments',sms:'https://bancoplata.mx/payments'};
+  assert.deepEqual(eventErrors(event),[]);
+  const evidence=createDemoEvidence({id:'fallback-ticket',variables:[]},event);
+  assert.deepEqual([...new Set(evidence.screens.map(screen=>screen.channel))],['Push','SMS']);
+  assert.equal(evidence.contract.pushMeta.deeplink,event.links.push);
+  assert.equal(evidence.contract.smsMeta.deeplink,event.links.sms);
 });
 
 test('preview distinguishes missing values, unknown values and blocking fallbacks',()=>{
