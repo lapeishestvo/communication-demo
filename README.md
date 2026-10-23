@@ -29,7 +29,9 @@ Open http://localhost:4173. Override the port with `PORT=4174 npm run dev`.
 - Styled dropdown menus follow the Aura reference and support keyboard selection.
 - Automatic browser-local draft persistence, explicit event save and validation.
 - Send ticket validates all events, transitions draft → text_pending and returns to the table.
-- Other statuses are sample data and read-only; their workflows are not implemented.
+- Text review: per-event Accept/Decline, required decline comments, decision history, return to writer and send approved tickets to development.
+- Preview variable controls update rendered messages without changing ticket values.
+- Remaining later statuses are sample data and read-only.
 
 This is a browser-local demo without a backend, authentication, actual notifications or a production Handlebars compiler. Sample data is fictional. The account shown in the header identifies the demo author; it does not sign in to a service. Local storage is scoped to the browser and origin. To reset sample data, delete `communication-tickets-v1` from local storage.
 

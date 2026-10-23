@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Content">
+<mask id="mask0_0_555" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="40" height="40">
+<path id="Mask" d="M20 0C31.0457 0 40 8.9543 40 20C40 31.0457 31.0457 40 20 40C8.9543 40 0 31.0457 0 20C0 8.9543 8.9543 0 20 0Z" fill="#ECEEF5"/>
+</mask>
+<g mask="url(#mask0_0_555)">
+<circle id="[BG / IMAGE]" cx="20" cy="20" r="20" fill="#E1FAE9"/>
+<g id="aura-icon-cover [Main Icon]">
+<path id="Intersect" d="M26.043 14.793C26.4336 14.4025 27.0666 14.4025 27.4571 14.793C27.8476 15.1836 27.8476 15.8166 27.4571 16.2071L19.5177 24.1466C18.5414 25.1227 16.9588 25.1226 15.9825 24.1466L13.293 21.4571C12.9025 21.0666 12.9025 20.4336 13.293 20.043C13.6836 19.6525 14.3166 19.6525 14.7071 20.043L17.3966 22.7325C17.5918 22.9275 17.9084 22.9276 18.1036 22.7325L26.043 14.793Z" fill="#252830"/>
+</g>
+</g>
+</g>
+</svg>

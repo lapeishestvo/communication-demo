@@ -79,3 +79,21 @@
 @keyframes drawer-in{from{transform:translateX(calc(100% + 20px))}to{transform:translateX(0)}}
 @media(max-width:600px){.drawer-backdrop{padding:12px}}
 @media(prefers-reduced-motion:reduce){.drawer-enter{animation:none}}
+.preview-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:20px 20px 12px}
+.preview-controls .select-trigger{font-size:15px}
+.review-card .event-columns{flex:1}
+.review-panel{min-height:0;display:flex;flex-direction:column;background:white}
+.review-body{flex:1;min-height:0;overflow:auto}
+.review-comment{padding:20px}
+.review-comment .field.multiline textarea{min-height:88px}
+.review-comment .field>span:first-child{font-size:17px}
+.review-comment .field.filled>span:first-child{font-size:13px}
+.review-actions{display:flex;gap:8px;padding:20px;border-top:4px solid #f3f5fa;flex:none}
+.review-actions .button{flex:1;font-size:17px}
+.decline-button{color:#f20c0c}.button.accept-button{background:#00a637;color:white}
+.review-details{padding:20px;margin:0;display:flex;flex-direction:column;gap:20px}
+.review-details>div{display:grid;grid-template-columns:145px minmax(0,1fr);gap:16px}.review-details dt{color:var(--secondary)}.review-details dd{margin:0;overflow-wrap:anywhere}
+.review-copy{padding:20px;overflow-wrap:anywhere}.review-copy h3{font-size:17px;line-height:20px;margin:32px 0 20px}.review-language{margin-bottom:20px}.review-language:empty{display:none}.review-language strong{display:block;margin-bottom:4px}.review-language p{white-space:pre-wrap}
+.review-timeline{display:flex;gap:12px;padding:32px 16px 12px;align-items:flex-start}.review-timeline strong{font-size:17px;font-weight:400}.review-timeline small{display:block;font-size:13px;color:var(--secondary);margin-top:4px;line-height:16px}.review-timeline time{margin-left:auto;text-align:right;font-size:17px;white-space:nowrap}.review-note{margin:0 20px 20px 68px;border:1px solid #d8dbe5;border-radius:12px;padding:12px;white-space:pre-wrap}
+.ticket-heading .text_review{background:#ccdaff;color:#150dfe}
+@media(max-width:900px){.review-panel{min-height:300px}.review-body{min-height:160px}.review-card .event-columns{display:flex;flex-direction:column}}

@@ -18,8 +18,8 @@ async function embedAsset(filename){
   return embeddedAssets.get(filename);
 }
 
-const [template,css,model,app]=await Promise.all(
-  ['index.html','styles.css','model.js','app.js'].map(filename=>readFile(path.join(publicRoot,filename),'utf8'))
+const [template,css,model,preview,app]=await Promise.all(
+  ['index.html','styles.css','model.js','preview.js','app.js'].map(filename=>readFile(path.join(publicRoot,filename),'utf8'))
 );
 const cssAssets=[...css.matchAll(/url\(\s*(['"]?)\.\/assets\/([^)'"\s]+)\1\s*\)/g)];
 let embeddedCss=css;
@@ -38,8 +38,8 @@ for(const match of assetDeclaration[0].matchAll(/(['"])([^'"\n]+\.(?:svg|png|wof
 const embeddedApp=app
   .replace(assetDeclaration[0],embeddedDeclaration)
   .replaceAll('./assets/${assets','${assets')
-  .replace(/^import[^\n]*from\s+['"]\.\/model\.js['"];?\s*\n/,'');
-const script=`${model.replace(/^export\s+/gm,'')}\n${embeddedApp}`.replace(/<\/script/gi,'<\\/script');
+  .replace(/^import[^\n]*\n/gm,'');
+const script=`${model.replace(/^export\s+/gm,'')}\n${preview.replace(/^import[^\n]*\n/gm,'').replace(/^export\s+/gm,'')}\n${embeddedApp}`.replace(/<\/script/gi,'<\\/script');
 const standalone=template
   .replace(/<link\s+rel="stylesheet"\s+href="\.\/styles\.css"\s*\/>/,()=>`<style>${embeddedCss}</style>`)
   .replace(/<script\s+type="module"\s+src="\.\/app\.js"><\/script>/,()=>`<script type="module">${script}</script>`);
