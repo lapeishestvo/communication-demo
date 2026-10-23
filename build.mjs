@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 const projectRoot=path.dirname(fileURLToPath(import.meta.url));
 const publicRoot=path.join(projectRoot,'public');
 const outputRoot=path.join(projectRoot,'dist');
-const mimeTypes={'.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'};
+const mimeTypes={'.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2','.ttf':'font/ttf'};
 const embeddedAssets=new Map();
 async function embedAsset(filename){
   if(!embeddedAssets.has(filename)){
@@ -23,6 +23,8 @@ const [template,css,model,app]=await Promise.all(
 );
 const cssAssets=[...css.matchAll(/url\(\s*(['"]?)\.\/assets\/([^)'"\s]+)\1\s*\)/g)];
 let embeddedCss=css;
+const robotoLicense=await readFile(path.join(publicRoot,'assets','roboto-OFL.txt'),'utf8');
+embeddedCss=`/* Roboto font license\n${robotoLicense}\n*/\n${embeddedCss}`;
 for(const match of cssAssets){
   embeddedCss=embeddedCss.replaceAll(match[0],`url('${await embedAsset(match[2])}')`);
 }
@@ -30,7 +32,7 @@ for(const match of cssAssets){
 const assetDeclaration=app.match(/const assets=\{[^\n]+\};/);
 if(!assetDeclaration)throw new Error('Cannot locate the application asset map.');
 let embeddedDeclaration=assetDeclaration[0];
-for(const match of assetDeclaration[0].matchAll(/(['"])([^'"\n]+\.(?:svg|png|woff2))\1/g)){
+for(const match of assetDeclaration[0].matchAll(/(['"])([^'"\n]+\.(?:svg|png|woff2|ttf))\1/g)){
   embeddedDeclaration=embeddedDeclaration.replaceAll(match[0],JSON.stringify(await embedAsset(match[2])));
 }
 const embeddedApp=app
