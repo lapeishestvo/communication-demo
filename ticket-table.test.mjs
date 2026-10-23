@@ -43,7 +43,7 @@ test('ticket rows are click targets while ticket names remain keyboard-accessibl
   }
   const newTicket=demo.html().match(/<button\b([^>]*data-action="new-ticket"[^>]*)>/);
   assert.ok(newTicket);
-  assert.ok(!attributes(newTicket[1]).class.split(/\s+/).includes('primary'));
+  assert.ok(attributes(newTicket[1]).class.split(/\s+/).includes('primary'));
 });
 
 test('clicking any ticket cell, status badge, date or row whitespace opens that ticket',()=>{

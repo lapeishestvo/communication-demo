@@ -17,7 +17,7 @@ Open http://localhost:4173. Override the port with `PORT=4174 npm run dev`.
 
 ## Included
 
-- Ticket table: name, author, status, last updated, sorting and pagination. Any cell opens its ticket; the title remains keyboard accessible. New ticket and hover states use neutral colors.
+- Ticket table: name, author, status, last updated, sorting and pagination. Any cell opens its ticket; the title remains keyboard accessible. Row hover states use neutral colors; New ticket retains its original primary style.
 - Ticket header: name and status above the assigned person; assignment dates are shown when available. History is deferred.
 - General info fills TTL automatically: 7 days normally, 10 minutes for OTP, 1 day for Origination. Service silent hours default to 11 p.m. – 6 a.m.; Marketing defaults to 8 p.m. – 8 a.m. and cannot use “No silent hours”. Manual overrides remain when changing other fields.
 - Business review uses generated demo evidence per event: tester comments, phone captures for its active channels, and an event-specific contract with the same input values and recipient. A new review stores a snapshot; existing tickets without evidence receive a stable generated example without changing their saved data on view.
