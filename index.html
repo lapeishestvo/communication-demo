@@ -171,6 +171,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .variable-modal .radio-group:has(input[name="source"]){padding:4px}
 .variable-modal .radio-group:has(input[name="source"]) label{min-height:48px}
 @media(min-width:601px){.variable-modal .radio-group:has(input[name="source"]) label:last-child{flex:0 0 180px}}
+
+/* Value and text variation editors slide in from the right. */
+.token[role="button"]{cursor:pointer}
+.token[role="button"]:focus-visible{outline:2px solid #544bff;outline-offset:2px}
+.drawer-backdrop{justify-content:flex-end;align-items:stretch;padding:20px;overflow:hidden}
+.modal.drawer{height:100%;max-height:100%;flex:none}
+.drawer .modal-fields{padding-bottom:20px}
+.drawer-enter{animation:drawer-in .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes drawer-in{from{transform:translateX(calc(100% + 20px))}to{transform:translateX(0)}}
+@media(max-width:600px){.drawer-backdrop{padding:12px}}
+@media(prefers-reduced-motion:reduce){.drawer-enter{animation:none}}
 </style>
 </head>
 <body>
@@ -336,7 +347,14 @@ function valuesView(){return `<div class="values-card"><div class="section-title
 function eventView(){const e=event();if(!e){state.nav='general';return generalView();}const index=ticket().events.indexOf(e);return `<section class="event-workspace"><div class="event-card"><div class="section-title"><h2>Event ${index+1}</h2><div class="event-tools">${editable()?iconBtn('copy','duplicate','Duplicate event',ticket().events.length>=MAX_EVENTS?'disabled':'')+iconBtn('trash','delete-event','Delete event'):''}</div></div><div class="event-columns"><div class="event-form"><div class="tabs" role="tablist">${[['main','Main info'],['texts','Texts'],['content','Content']].map(([key,label])=>`<button role="tab" aria-selected="${state.tab===key}" data-action="tab" data-tab="${key}" class="${state.tab===key?'active':''}">${label}</button>`).join('')}</div><div class="form-scroll" role="tabpanel">${state.tab==='main'?mainInfoView(e):state.tab==='texts'?textsView(e):contentView(e)}</div></div><aside class="preview"><div class="preview-title"><h3>Preview</h3></div><div id="preview-content"></div></aside></div></div>${editable()?`<footer class="event-footer"><div class="event-footer-left">${state.tab==='main'?'':btn(icon('prev'),'previous','square','aria-label="Previous step"')}${btn('Save event','save-event','save-event')}</div>${btn(`Next ${icon('next')}`,'next','primary next-button')}</footer>`:''}</section>`;}
 function mainInfoView(e){const ro=!editable();return `<div class="fieldset">${field('Name','name',e.name,{disabled:ro,hint:'Recommended format: [purpose] [version number] [channel]'})}${field('Comment','comment',e.comment,{disabled:ro})}<h3>Recipient selection</h3>${choices('Recipient selection','recipient',e.recipient,[['identity','By identity ID'],['user','By user ID']])}<h3>Delivery</h3>${field('Channel','channel',e.channel,{disabled:ro,choices:['Push','SMS','Push + SMS','Email','WhatsApp']})}${choices('Frequency','recurring',e.recurring,[['false','Send one time'],['true','Recurring event']])}${e.recurring?field('How many times and how often','schedule',e.schedule,{disabled:ro}):''}</div>`;}
 function richField(label,key,value){return `<div class="field-wrap rich-wrap" data-wrap="${key}"><div class="field rich-field ${value?'filled':''}"><label id="label-${key}">${esc(label)}</label><div class="rich-input" contenteditable="${editable()}" role="textbox" aria-labelledby="label-${key}" aria-multiline="true" data-rich="${key}">${richHtml(value)}</div><span class="flag">${icon(key.endsWith('Es')?'mx':'us')}</span></div>${editable()?`<button class="insert-value" data-action="insert-value" data-target="${key}" title="Insert value (@)" aria-label="Insert a value into ${esc(label)}">@</button>`:''}</div>`;}
-function richHtml(value){return esc(value).replace(/\{\{([^}]+)\}\}/g,(_,name)=>`<span class="token" contenteditable="false" data-token="${name}">${name}</span>`).replace(/\n/g,'<br>');}
+function tokenHtml(name){return `<span class="token" contenteditable="false" role="button" tabindex="0" data-action="edit-token" data-token="${esc(name)}" aria-label="${editable()?'Edit':'View'} ${esc(name)}">${esc(name)}</span>`;}
+function richHtml(value){return String(value??'').split(/(\{\{[^}]+\}\})/g).map(part=>{const match=part.match(/^\{\{([^}]+)\}\}$/);return match?tokenHtml(match[1]):esc(part);}).join('').replace(/\n/g,'<br>');}
+function editToken(token){
+  const value=ticket()?.variables.find(v=>v.name===token.dataset.token);if(!value)return;
+  const rich=token.closest('[data-rich]');
+  token.focus();closeMention();newVariable(value.kind,null,value.id);
+  if(rich)modal.tokenOrigin={key:rich.dataset.rich,index:[...rich.querySelectorAll('[data-token]')].indexOf(token)};
+}
 function readRich(el){let value='';for(const child of el.childNodes){if(child.nodeType===Node.TEXT_NODE)value+=child.textContent;else if(child.dataset?.token)value+=`{{${child.dataset.token}}}`;else if(child.nodeName==='BR')value+='\n';else value+=readRich(child)+(child.nodeName==='DIV'?'\n':'');}return value.replace(/\u200b/g,'').replace(/\n$/,'');}
 function textsView(e){const channels=channelsFor(e);return `<div class="fieldset">${field('Any details that help UX-writer with the text','writerNote',e.writerNote,{disabled:!editable()})}${channels.map(c=>{const key=c.toLowerCase();return `<h3>${c}</h3>${['Push','Email'].includes(c)?richField('Title in English',key+'Title',e.texts[key+'Title']):''}${richField('Message in English',key+'Message',e.texts[key+'Message'])}${['Push','Email'].includes(c)?richField('Title in Spanish (optional)',key+'TitleEs',e.texts[key+'TitleEs']):''}${richField('Message in Spanish (optional)',key+'MessageEs',e.texts[key+'MessageEs'])}`;}).join('')}</div>`;}
 function contentView(e){const supported=channelsFor(e).filter(c=>['Push','SMS'].includes(c));return `<div class="fieldset">${supported.map(c=>{const key=c.toLowerCase();return `<h3 class="first-heading">Deep link for ${c==='SMS'?'SMS':'push'}</h3>${choices('Deep link for '+key,'linkEnabled.'+key,e.linkEnabled[key],[['false','None / Add later'],['true','Add deep link']])}${e.linkEnabled[key]?field('Deep link',key+'Link',e.links[key],{disabled:!editable()}) :''}`;}).join('')}</div>`;}
@@ -363,11 +381,11 @@ function renderModal(){if(!modal)return;closeDropdown();const active=document.ac
     else if(active.dataset.field)focusSelector=`[data-field="${CSS.escape(active.dataset.field)}"]${active.type==='radio'?`[value="${CSS.escape(active.value)}"]`:''}`;
     else if(active.dataset.row)focusSelector=`[data-row="${active.dataset.row}"][data-column="${active.dataset.column}"]`;
     else if(active.dataset.action)focusSelector=`[data-action="${active.dataset.action}"]${active.dataset.tab?`[data-tab="${active.dataset.tab}"]`:''}`;
-  }const isGeneral=modal.type==='general',isDelete=modal.type==='delete';document.body.classList.add('modal-open');$('#app').inert=true;$('.app-header').inert=true;let title,content,footer;
+  }const isGeneral=modal.type==='general',isDelete=modal.type==='delete',isDrawer=modal.type==='variable',entering=isDrawer&&!$('#overlay').querySelector('.drawer');document.body.classList.add('modal-open');$('#app').inert=true;$('.app-header').inert=true;let title,content,footer;
   if(isGeneral){title=modal.edit?'Edit general info':'New ticket';content=`<form id="general-form" class="modal-fields">${generalFields(modal.data)}</form>`;footer=btn('Cancel','close-modal')+`<button type="submit" form="general-form" class="button primary">${modal.edit?'Save':'Create'}</button>`;}
   else if(isDelete){title='Delete event?';content=`<div class="modal-fields"><p>“${esc(event()?.name||'Untitled event')}” will be removed from this ticket.</p></div>`;footer=btn('Cancel','close-modal')+btn('Delete','confirm-delete','danger');}
   else {title=modal.data.kind==='variations'?'Text variations':'Value';content=variableView();footer=btn('Cancel','close-modal')+btn(modal.editId?'Save':'Create','save-variable','primary',!editable()?'disabled':'');}
-  $('#overlay').innerHTML=`<div class="modal-backdrop"><section class="modal ${!isGeneral&&!isDelete&&modal.data.kind==='variations'?'wide':''} ${!isGeneral&&!isDelete?'variable-modal':''}" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-header"><h2 id="modal-title">${title}</h2>${iconBtn('close','close-modal','Close dialog')}</div>${content}<div class="modal-footer">${footer}</div></section></div>`;
+  $('#overlay').innerHTML=`<div class="modal-backdrop ${isDrawer?'drawer-backdrop':''}"><section class="modal ${isDrawer?'drawer':''} ${entering?'drawer-enter':''} ${!isGeneral&&!isDelete&&modal.data.kind==='variations'?'wide':''} ${!isGeneral&&!isDelete?'variable-modal':''}" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-header"><h2 id="modal-title">${title}</h2>${iconBtn('close','close-modal','Close dialog')}</div>${content}<div class="modal-footer">${footer}</div></section></div>`;
   if(focusSelector)($('#overlay').querySelector(focusSelector)||$('#overlay button'))?.focus();
 }
 function newVariable(kind='value',target=null,editId=null){const found=ticket().variables.find(v=>v.id===editId);let data=found?structuredClone(found):{id:uid(),kind,name:'',parameter:'',example:'',source:'default',fallback:'default',defaultEn:'',defaultEs:'',rows:[]};data.source ||=parameters.includes(data.parameter)?'default':'new';openModal({type:'variable',data,target,editId,tab:'value'});}
@@ -378,7 +396,7 @@ function openMention(el,atTyped=false){closeMention();mention={el,key:el.dataset
 function closeMention(){document.getElementById('mention-menu')?.remove();}
 function insertVariable(v,target=mention?.key){const el=document.querySelector(`[data-rich="${target}"]`);if(!el)return;el.focus();let range=mentionRange;if(!range||!el.contains(range.commonAncestorContainer)){range=document.createRange();range.selectNodeContents(el);range.collapse(false);}
   if(mention?.atTyped&&range.startContainer.nodeType===Node.TEXT_NODE&&range.startOffset>0){range.setStart(range.startContainer,range.startOffset-1);range.deleteContents();}
-  const token=document.createElement('span');token.className='token';token.contentEditable='false';token.dataset.token=v.name;token.textContent=v.name;range.insertNode(token);const space=document.createTextNode('\u200b');token.after(space);range.setStartAfter(space);range.collapse(true);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);event().texts[target]=readRich(el);el.closest('.field').classList.add('filled');event().saved=false;touch();updatePreview();closeMention();mention=null;mentionRange=null;}
+  const token=document.createElement('span');token.className='token';token.contentEditable='false';token.dataset.token=v.name;token.dataset.action='edit-token';token.setAttribute('role','button');token.tabIndex=0;token.setAttribute('aria-label','Edit '+v.name);token.textContent=v.name;range.insertNode(token);const space=document.createTextNode('\u200b');token.after(space);range.setStartAfter(space);range.collapse(true);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);event().texts[target]=readRich(el);el.closest('.field').classList.add('filled');event().saved=false;touch();updatePreview();closeMention();mention=null;mentionRange=null;}
 function showErrors(errors){state.errors=errors;render();}
 function saveCurrent(advance=false){const e=event();const errors=eventErrors(e);const relevant=advance?errors.filter(x=>x.tab===state.tab):errors;if(relevant.length){state.errors=relevant.map(x=>({...x,nav:e.id}));render();toast('Complete the required fields.');return false;}
   state.errors=[];
@@ -390,7 +408,8 @@ function sendTicket(){const t=ticket();if(!editable())return;const errors=ticket
 
 document.addEventListener('click',e=>{
   const trigger=e.target.closest('[data-action]');if(!trigger||trigger.disabled)return;const a=trigger.dataset.action;
-  if(a==='toggle-dropdown')openDropdown(trigger);
+  if(a==='edit-token')editToken(trigger);
+  else if(a==='toggle-dropdown')openDropdown(trigger);
   else if(a==='select-dropdown-option')chooseDropdown(Number(trigger.dataset.optionIndex));
   else if(a==='new-ticket')openModal({type:'general',data:blankGeneral(),edit:false});
   else if(a==='edit-general'&&editable())openModal({type:'general',data:Object.fromEntries(Object.keys(blankGeneral()).map(k=>[k,ticket()[k]])),edit:true});
@@ -422,14 +441,14 @@ document.addEventListener('click',e=>{
   else if(a==='add-variation'){const value=(modal.newRow||'').trim();if(!value)return;if(modal.data.rows.some(r=>r.value===value)){toast('This value already exists.');return;}modal.data.rows.push({value,mode:'Custom text',en:'',es:''});modal.newRow='';renderModal();}
   else if(a==='save-variable'&&editable())saveVariable();
 });
-function saveVariable(){const v=modal.data;v.parameter=v.parameter.trim();v.name=(v.name||v.parameter).trim();if(!v.name||!v.parameter){modal.error='Enter a name and choose a parameter.';renderModal();return;}
+function saveVariable(){if(!editable())return;const v=modal.data;v.parameter=v.parameter.trim();v.name=(v.name||v.parameter).trim();if(!v.name||!v.parameter){modal.error='Enter a name and choose a parameter.';renderModal();return;}
   if(/[{}@]/.test(v.name)){modal.error='Use a name without @ or braces.';renderModal();return;}
   if(ticket().variables.some(x=>x.name.toLowerCase()===v.name.toLowerCase()&&x.id!==modal.editId)){modal.error='A value with this name already exists.';renderModal();return;}
   if(v.kind==='variations'&&!v.rows.length){modal.error='Add at least one text variation.';modal.tab='variations';renderModal();return;}
   if(v.kind==='variations'&&v.rows.some(r=>r.mode==='Custom text'&&!r.en.trim())){modal.error='Add English text for every custom text variation.';modal.tab='variations';renderModal();return;}
   if(v.fallback==='default'&&!v.defaultEn.trim()){modal.error='Add a default text in English, or choose another fallback.';modal.tab=v.kind==='variations'?'unknown':'value';renderModal();return;}
   const old=ticket().variables.find(x=>x.id===modal.editId);if(old){for(const item of ticket().events)for(const key of Object.keys(item.texts))item.texts[key]=item.texts[key].split(`{{${old.name}}}`).join(`{{${v.name}}}`);ticket().variables=ticket().variables.map(x=>x.id===old.id?structuredClone(v):x);}else ticket().variables.push(structuredClone(v));
-  const target=modal.target;closeModal();touch();if(target){if(old)render();insertVariable(v,target);}else render();toast('Value saved');
+  const target=modal.target,origin=modal.tokenOrigin;closeModal();touch();if(target){if(old)render();insertVariable(v,target);}else render();if(origin)document.querySelector(`[data-rich="${CSS.escape(origin.key)}"]`)?.querySelectorAll('[data-token]')[origin.index]?.focus();toast('Value saved');
 }
 document.addEventListener('submit',e=>{if(e.target.id!=='general-form')return;e.preventDefault();const g=modal.data;if(Object.entries(g).some(([k,v])=>k!=='comment'&&!v.trim())){toast('Complete all required fields.');return;}if(modal.edit){Object.assign(ticket(),g);touch();closeModal();render();}else{const t={id:uid(),...g,author:'Ekaterina Tarasova',status:'draft',updated:new Date().toISOString(),events:[],variables:[]};tickets.unshift(t);persist();closeModal();openTicket(t.id);toast('Draft created');}});
 function handleField(el){const key=el.dataset.field,scope=el.dataset.scope;if(!key)return;const value=el.value;const control=el.closest('.field');control?.classList.toggle('filled',!!value);control?.classList.remove('is-invalid');el.removeAttribute('aria-invalid');control?.querySelector('.select-trigger')?.removeAttribute('aria-invalid');
@@ -460,11 +479,12 @@ document.addEventListener('invalid',e=>{
   if(validationFrame===null)validationFrame=requestAnimationFrame(()=>{validationFrame=null;$('#general-form [aria-invalid="true"]')?.focus();toast('Complete all required fields.');});
 },true);
 document.addEventListener('paste',e=>{if(!e.target.matches('[data-rich]'))return;e.preventDefault();const text=e.clipboardData.getData('text/plain');const sel=window.getSelection();if(!sel.rangeCount)return;const range=sel.getRangeAt(0);range.deleteContents();const node=document.createTextNode(text);range.insertNode(node);range.setStartAfter(node);range.collapse(true);sel.removeAllRanges();sel.addRange(range);e.target.dispatchEvent(new InputEvent('input',{bubbles:true}));});
-document.addEventListener('pointerdown',e=>{if(e.target.closest('#mention-menu, .dropdown-menu'))e.preventDefault();else if(!e.target.closest('.rich-wrap'))closeMention();});
+document.addEventListener('pointerdown',e=>{const token=e.target.closest('.token[data-action="edit-token"]');if(token){e.preventDefault();token.focus();closeMention();return;}if(e.target.closest('#mention-menu, .dropdown-menu'))e.preventDefault();else if(!e.target.closest('.rich-wrap'))closeMention();});
 document.addEventListener('click',e=>{if(dropdownMenu&&!e.target.closest('.select-control, .dropdown-menu'))closeDropdown();if(e.target.classList.contains('modal-backdrop'))closeModal();});
 document.addEventListener('scroll',e=>{if(dropdownMenu&&!dropdownMenu.element.contains(e.target))closeDropdown();const menu=document.getElementById('mention-menu');if(menu&&!menu.contains(e.target))closeMention();},true);
 window.addEventListener('resize',()=>{closeDropdown();closeMention();});
 document.addEventListener('keydown',e=>{
+  const token=e.target.closest?.('.token[data-action="edit-token"]');if(token&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editToken(token);return;}
   const selectTrigger=e.target.closest?.('.select-trigger');
   if(dropdownMenu){
     if(e.key==='Escape'){e.preventDefault();closeDropdown(true);return;}

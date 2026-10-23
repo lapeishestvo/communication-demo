@@ -22,6 +22,8 @@ Open http://localhost:4173. Override the port with `PORT=4174 npm run dev`.
 - Up to 10 events per ticket, including duplication and deletion.
 - Main info, English and optional Spanish texts, deep links and channel previews.
 - @ insertion of values and text variations, shared across ticket events.
+- Click a blue value badge to edit its existing value in a drawer on the right; Enter and Space also open it.
+- Value and text variation drawers preserve the original text and update shared references when saved.
 - Dictionary or custom parameters, per-value custom text, dictionary and unknown treatments; default/hide/do-not-send fallback behavior.
 - Preview uses the examples configured for the ticket's values and text variations.
 - Styled dropdown menus follow the Aura reference and support keyboard selection.
