@@ -122,6 +122,39 @@ export function createDemoEvidence(ticket,event,index=0){
   const comment=screens.length?[notes[hash%notes.length],samples?`Checked ${samples}.`:'',used.some(variable=>!overrides[variable.id])?'Empty values are handled by the configured fallback.':'',links,missing.length?`${missing.join(' and ')} still needs a sendable test case before review.`:''].filter(Boolean).join(' '):activeChannels.length?`No sendable ${activeChannels.join(' or ')} test message yet. Add complete text and a supported variable value.`:'No delivery channel selected. Please add a channel before testing.';
   return {demo:true,eventId:event.id,eventName:event.name,tester,testedAt,comment,contract,screens};
 }
+const demoSpanishCopy={
+  'Refund from {{Bank name}}':'Reembolso de {{Bank name}}',
+  '{{Amount}} returned {{Account type}}. Transfer to {{Recipient’s name}} failed.':'Se devolvieron {{Amount}} {{Account type}}. La transferencia a {{Recipient’s name}} falló.',
+  'recipient’s bank':'el banco del destinatario',
+  'The money you sent':'El dinero que enviaste',
+  'to your bank account':'a tu cuenta bancaria',
+  'to Cuenta':'a Cuenta',
+  'to Bolsillo':'a Bolsillo',
+  'to CDT':'a CDT'
+};
+// Upgrade known demo copy without replacing translations or customer-authored text.
+export function populateDemoTranslations(ticket){
+  if(!['text_review','in_development','in_testing','business_review','migration','in_prod_testing','done','canceled'].includes(ticket.status))return false;
+  let changed=false;
+  const fill=(target,english,spanish)=>{
+    const translation=demoSpanishCopy[target[english]];
+    if(!String(target[spanish]??'').trim()&&typeof translation==='string'){
+      target[spanish]=translation;changed=true;
+    }
+  };
+  for(const event of ticket.events){
+    for(const channel of channelsFor(event)){
+      const key=channel.toLowerCase();
+      if(channel==='Push')fill(event.texts,key+'Title',key+'TitleEs');
+      fill(event.texts,key+'Message',key+'MessageEs');
+    }
+  }
+  for(const variable of ticket.variables){
+    fill(variable,'defaultEn','defaultEs');
+    for(const row of variable.rows||[])if(row.mode==='Custom text')fill(row,'en','es');
+  }
+  return changed;
+}
 export function seedTickets(){
   const names=[
     '2 events for Collection — Agent test','3 events for Delivery — Meeting reminders','1 event for Operations — Transfer refund','2 events for Origination — Application update','1 event for Precollection — Payment reminder','2 events for Savings — Account activation','1 event for Collection — Payment confirmed','3 events for Cards — Delivery updates','1 event for Security — Login verification','2 events for Growth — Credit limit increase','1 event for Operations — Card payment declined','2 events for Collection — Overdue balance','1 event for Business — Document request','2 events for Growth — Referral rewards','1 event for Delivery — Meeting rescheduled','2 events for Origination — Welcome messages'];
@@ -133,6 +166,7 @@ export function seedTickets(){
     const count=Number(name.match(/^\d/)[0]);
     for(let n=0;n<count;n++)t.events.push({...newEvent(),name:n?'Payment reminder v1 SMS':'Transfer refund v1 Push + SMS',channel:n?'SMS':'Push + SMS',saved:true,texts:{...newEvent().texts,pushTitle:'Refund from {{Bank name}}',pushMessage:'{{Amount}} returned {{Account type}}. Transfer to {{Recipient’s name}} failed.',smsMessage:'{{Amount}} returned {{Account type}}. Transfer to {{Recipient’s name}} failed.'}});
     t.variables=[{id:uid(),name:'Bank name',parameter:'Bank name',kind:'value',example:'CNBV',fallback:'default',defaultEn:'recipient’s bank',defaultEs:'',rows:[]},{id:uid(),name:'Amount',parameter:'Amount',kind:'value',example:'$200',fallback:'default',defaultEn:'The money you sent',defaultEs:'',rows:[]},{id:uid(),name:'Recipient’s name',parameter:'Recipient’s name',kind:'value',example:'Pedro Pascal',fallback:'hide',defaultEn:'',defaultEs:'',rows:[]},{id:uid(),name:'Account type',parameter:'Account type',kind:'variations',example:'Cuenta',fallback:'default',defaultEn:'to your bank account',defaultEs:'',rows:dictionaries['Account type'].map((value,n)=>({value,mode:n<3?'Custom text':n===12?'Unknown':'Dictionary',en:n<3?['to Cuenta','to Bolsillo','to CDT'][n]:value,es:''}))}];
+    populateDemoTranslations(t);
     if(['business_review','migration','in_prod_testing','done'].includes(t.status))t.events.forEach((event,index)=>{event.testEvidence=createDemoEvidence(t,event,index);});
     return t;
   });

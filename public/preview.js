@@ -2,17 +2,16 @@ import {channelsFor,dictionaries,resolveText} from './model.js';
 
 export const PREVIEW_EMPTY='__preview_empty__';
 
-export function previewVariables(e,variables,lang='en'){
+export function previewVariables(e,variables){
   const channels=channelsFor(e).map(channel=>channel.toLowerCase());
-  const suffix=lang==='es'?'Es':'';
   const names=new Set(Object.entries(e.texts||{})
-    .filter(([key])=>channels.some(channel=>key===channel+'Title'+suffix||key===channel+'Message'+suffix))
+    .filter(([key])=>channels.some(channel=>['Title','Message','TitleEs','MessageEs'].some(part=>key===channel+part)))
     .flatMap(([,text])=>[...String(text).matchAll(/\{\{([^}]+)\}\}/g)].map(match=>match[1])));
   return variables.filter(variable=>names.has(variable.name));
 }
 
-export function previewControlsHtml(e,variables,preview,{field,lang='en'}){
-  const used=previewVariables(e,variables,lang);
+export function previewControlsHtml(e,variables,preview,{field}){
+  const used=previewVariables(e,variables);
   if(!used.length)return '';
   const controls=used.map(variable=>{
     const value=Object.hasOwn(preview,variable.id)?preview[variable.id]:variable.example??'';

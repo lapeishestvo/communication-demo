@@ -1,5 +1,5 @@
 import {previewControlsHtml,previewVersions,previewVersionValues,PREVIEW_EMPTY} from './preview.js';
-import {MAX_EVENTS,deliveryChannels,communicationTypes,STATUS,products,processes,dictionaries,parameters,uid,newEvent,blankGeneral,generalErrors,generalDefaults,channelsFor,eventErrors,ticketErrors,addEvent,resolveText,seedTickets,createDemoEvidence} from './model.js';
+import {MAX_EVENTS,deliveryChannels,communicationTypes,STATUS,products,processes,dictionaries,parameters,uid,newEvent,blankGeneral,generalErrors,generalDefaults,channelsFor,eventErrors,ticketErrors,addEvent,resolveText,seedTickets,createDemoEvidence,populateDemoTranslations} from './model.js';
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,6 +11,7 @@ const badge=s=>`<span class="badge ${esc(s)}">${esc(STATUS[s]||s)}</span>`;
 const STORAGE='communication-tickets-v1';
 let tickets;
 try{const parsed=JSON.parse(localStorage.getItem(STORAGE));tickets=Array.isArray(parsed)&&parsed.length&&parsed.every(t=>t.id&&t.name&&Array.isArray(t.events)&&Array.isArray(t.variables)&&STATUS[t.status])?parsed:seedTickets();}catch{tickets=seedTickets();}
+tickets.forEach(populateDemoTranslations);
 let state={ticketId:null,nav:'general',tab:'main',page:1,pageSize:14,sort:'updated',direction:-1,errors:[],preview:{},lang:'en',reviewErrors:{}};
 let modal=null,lastFocus=null,storageWarned=false,mention=null,mentionRange=null,dropdownMenu=null,validationFrame=null;
 const ticket=()=>tickets.find(t=>t.id===state.ticketId);
@@ -185,6 +186,7 @@ function reviewStage(action){
     if(!t.events.length||t.events.some(e=>e[reviewKey()]?.decision!=='approved')){toast(`Accept every event before sending to ${destination}.`);return;}
     t.status=destination==='migration'?'migration':'in_development';
   }else return;
+  populateDemoTranslations(t);
   state.nav=t.events[0]?.id||'general';state.tab=businessReviewing()?'screens':'texts';touch();render();
 }
 

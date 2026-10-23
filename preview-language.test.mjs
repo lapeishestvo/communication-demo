@@ -33,14 +33,14 @@ function boot(status='draft'){
   return {run,storage,focused:()=>focused,html:()=>elements.get('#app').innerHTML,preview:()=>elements.get('#preview-content').innerHTML,click(lang){const target=buttons[lang]||{dataset:{action:'preview-language',lang},disabled:false,classList:classes(),closest(selector){return selector==='[data-action]'?this:null;}};for(const handler of listeners.get('click')||[])handler({target});}};
 }
 
-test('preview variable controls follow the selected language and active channel without losing overrides',()=>{
+test('preview variable controls stay identical across languages and follow the active channel without losing overrides',()=>{
   const event={...newEvent(),channel:'SMS',texts:{smsMessage:'{{english}}',smsMessageEs:'{{spanish}}',pushTitleEs:'{{inactive}}'}};
   const variables=['english','spanish','inactive'].map(name=>({id:name,name,parameter:name,kind:'value',example:name+' example'}));
-  assert.deepEqual(previewVariables(event,variables,'en').map(variable=>variable.name),['english']);
-  assert.deepEqual(previewVariables(event,variables,'es').map(variable=>variable.name),['spanish']);
+  assert.deepEqual(previewVariables(event,variables,'en').map(variable=>variable.name),['english','spanish']);
+  assert.deepEqual(previewVariables(event,variables,'es').map(variable=>variable.name),['english','spanish']);
   const overrides={english:'English override',spanish:'Valor elegido'},before=JSON.stringify({event,variables,overrides}),calls=[];
   previewControlsHtml(event,variables,overrides,{lang:'es',field:(label,key,value)=>{calls.push({label,key,value});return label;}});
-  assert.deepEqual(calls,[{label:'spanish',key:'spanish',value:'Valor elegido'}]);
+  assert.deepEqual(calls,[{label:'english',key:'english',value:'English override'},{label:'spanish',key:'spanish',value:'Valor elegido'}]);
   assert.equal(JSON.stringify({event,variables,overrides}),before);
 });
 
@@ -50,13 +50,14 @@ test('Spanish all versions use translated variations and fallback rather than En
   assert.deepEqual(versions.map(values=>resolveText(event.texts.smsMessageEs,[account],values,'es').value),['Para cuenta corriente','Para cuenta de ahorro','Para tu cuenta']);
 });
 
-for(const status of ['draft','text_review','business_review','text_pending','in_development','done']){
+for(const status of ['draft','text_review','business_review','text_pending','in_development','in_testing','migration','in_prod_testing','done','canceled']){
   test(`${status}: the visible language switch updates copy and all versions without saving or changing navigation`,()=>{
     const demo=boot(status),before=demo.run('JSON.stringify(ticket())'),saved=demo.storage.get('communication-tickets-v1'),position=demo.run('JSON.stringify([state.nav,state.tab,state.preview])');
     assert.match(demo.html(),/aria-label="Preview language"/);
     assert.match(demo.html(),/<button\b[^>]*data-lang="en"[^>]*aria-pressed="true"|<button\b[^>]*aria-pressed="true"[^>]*data-lang="en"/);
     assert.match(demo.preview(),/English title/);
     assert.match(demo.preview(),/English checking account \/ \$987/);
+    const controls=demo.html().match(/<div class="preview-controls">[\s\S]*?(?=<div id="preview-content")/)[0];
     demo.click('es');
     assert.equal(demo.run('state.lang'),'es');
     assert.match(demo.html(),/<button\b[^>]*data-lang="es"[^>]*aria-pressed="true"|<button\b[^>]*aria-pressed="true"[^>]*data-lang="es"/);
@@ -66,6 +67,7 @@ for(const status of ['draft','text_review','business_review','text_pending','in_
     assert.match(demo.preview(),/Español cuenta de ahorro \/ \$987/);
     assert.match(demo.preview(),/Español tu cuenta \/ \$987/);
     assert.doesNotMatch(demo.preview(),/English|checking account|savings account|your account/);
+    assert.equal(demo.html().match(/<div class="preview-controls">[\s\S]*?(?=<div id="preview-content")/)[0],controls);
     assert.equal(demo.focused(),'es');
     assert.equal(demo.run('JSON.stringify([state.nav,state.tab,state.preview])'),position);
     assert.equal(demo.run('JSON.stringify(ticket())'),before);
@@ -85,6 +87,21 @@ test('missing Spanish copy keeps empty placeholders instead of displaying Englis
   assert.match(demo.preview(),/No title/);
   assert.match(demo.preview(),/No message/);
   assert.doesNotMatch(demo.preview(),/English|checking account|\$987/);
+  assert.match(demo.html(),/data-field="account"/);
+  assert.match(demo.html(),/data-field="amount"[^>]*value="\$987"/);
+});
+
+test('switching to Spanish keeps controls and chosen values even when translated copy omits a variable',()=>{
+  const demo=boot('text_review');
+  demo.run("event().texts.pushMessageEs='Español {{amount}}';event().texts.smsMessageEs='SMS español {{amount}}';state.preview.account='savings';render();");
+  const before=demo.run('JSON.stringify([ticket(),state.preview])');
+  demo.click('es');
+  assert.match(demo.html(),/data-field="account"/);
+  assert.match(demo.html(),/<option value="savings" selected>/);
+  assert.match(demo.preview(),/Español \$987/);
+  demo.click('en');
+  assert.match(demo.preview(),/English savings account \/ \$987/);
+  assert.equal(demo.run('JSON.stringify([ticket(),state.preview])'),before);
 });
 
 test('unsupported language actions leave preview state and saved data unchanged',()=>{
